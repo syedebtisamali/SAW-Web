@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="CONTENT-TYPE" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" href="styles/style.css"/>
+  <title>S.A.W</title>
+  <style>
+    body {
+      background-color: lightgreen;
+    }
+    #Logo {
+      margin: 0 auto;
+      display: block;
+      width: 200px;
+    }
+    .Buttons {
+      display: flex;
+      justify-content: space-evenly;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: lightblue;
+      border-radius: 100%;
+    }
+    #battery-level {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      margin: 10px;
+      background-color: blue;
+      color: white;
+      padding: 5px;
+      font-size: 20px;
+      text-align: center;
+      border-radius: 5px;
+    }
+    .dot, .two-dot {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+    }
+    #Tdots {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      position: absolute;
+      left: 10px;
+      top: 10px;
+    }
+    .status {
+      position: absolute;
+      left: 50px;
+      top: 50px;
+    }
+    #aiResponseBox {
+      max-width: 700px;
+      height: 100px;
+      overflow-y: auto;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      padding: 20px;
+      background-color: lightblue;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    #r {
+      font-family: Arial, sans-serif;
+      justify-content: center;
+      transition: background-color 0.3s ease;
+    }
+  </style>
+</head>
+<body>
+  <div id="Tdots">
+    <div id="speed-status">
+      <div class="dot" id="speed-dot"></div>
+    </div>
+    <div id="vibration-status" style="display: flex; align-items: center;">
+      <div class="two-dot" id="vibration-dot" style="background-color: gray;"></div>
+    </div>
+  </div>
+  <div class="status" id="frequency-text">0 Hz</div>
+  <p id="battery-level">...</p>
+  <br />
+  <img id="Logo" src="https://i.ibb.co/GWnzJQX/Smart-Select-20241217-141709-Chrome-removebg-preview.png" alt="Logo">
+  <br />
+  <div class="Buttons">
+    <button>Button 1</button>
+    <button>Button 2</button>
+    <button>Button 3</button>
+    <button>Button 4</button>
+    <button>Button 5</button>
+  </div>
+  <br />
+  <div id="r">
+    <div id="aiResponseBox">AI Response will appear here...</div>
+  </div>
+  <div id="output">L.S :</div>
+  <br />
+  <div id="inputBox">Us.I:</div>
+
+  <script>
+    // Battery status script
+    if (navigator.getBattery) {
+      navigator.getBattery().then(function(battery) {
+        document.getElementById('battery-level').textContent = '' + (battery.level * 100) + '%';
+        battery.addEventListener('levelchange', function() {
+          document.getElementById('battery-level').textContent = '' + (battery.level * 100) + '%';
+        });
+      });
+    } else {
+      document.getElementById('battery-level').textContent = 'Battery status not supported';
+    }
+
+    // Internet speed test script
+    function testSpeed() {
+      const imageUrl = "https://www.gstatic.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png";
+      const startTime = new Date().getTime();
+      const image = new Image();
+      image.src = imageUrl + "?n=" + startTime;
+      image.onload = function() {
+        const endTime = new Date().getTime();
+        const duration = (endTime - startTime) / 1000; // Time in seconds
+        const speed = (image.width * image.height) / duration / 1024 / 1024; // Speed in Mbps
+        updateSpeedStatus(speed);
+      };
+    }
+
+    function updateSpeedStatus(speed) {
+      let dot = document.getElementById("speed-dot");
+      if (speed > 10) {
+        dot.style.backgroundColor = "green";
+      } else if (speed >= 5) {
+        dot.style.backgroundColor = "blue";
+      } else {
+        dot.style.backgroundColor = "red";
+      }
+    }
+
+    setInterval(testSpeed, 1000);
+    testSpeed();
+
+    // Vibration detection script
+    let shakeCount = 0;
+    let lastUpdate = Date.now();
+    let interval = 1000; // 1-second interval
+    let previousAcceleration = { x: 0, y: 0, z: 0 };
+
+    function handleMotion(event) {
+      const acceleration = event.accelerationIncludingGravity;
+      if (acceleration) {
+        const deltaX = Math.abs(acceleration.x - previousAcceleration.x);
+        const deltaY = Math.abs(acceleration.y - previousAcceleration.y);
+        const deltaZ = Math.abs(acceleration.z - previousAcceleration.z);
+        const totalDelta = deltaX + deltaY + deltaZ;
+
+        if (totalDelta > 0.3) {
+          shakeCount++;
+        }
+
+        previousAcceleration = { x: acceleration.x, y: acceleration.y, z: acceleration.z };
+        const now = Date.now();
+        if (now - lastUpdate >= interval) {
+          const frequency = shakeCount / (interval / 1000); // Frequency in Hz
+          updateVibrationStatus(frequency, totalDelta);
+          shakeCount = 0;
+          lastUpdate = now;
+        }
+      }
+    }
+
+    function updateVibrationStatus(frequency, totalDelta) {
+      const dot = document.getElementById("vibration-dot");
+      const frequencyText = document.getElementById("frequency-text");
+      frequencyText.textContent = "" + frequency.toFixed(2) + " Hz";
+
+      if (totalDelta > 5) {
+        dot.style.backgroundColor = "red";
+      } else if (totalDelta > 2) {
+        dot.style.backgroundColor = "blue";
+      } else {
+        dot.style.backgroundColor = "green";
+      }
+    }
+
+    if (window.DeviceMotionEvent) {
+      window.addEventListener("devicemotion", handleMotion);
+    }
+
+    const outputDiv = document.getElementById("output");
+    const inputBox = document.getElementById("inputBox");
+    const aiResponseBox = document.getElementById("aiResponseBox");
+    let userCommand = "";
+
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.continuous = true;
+    recognition.lang = "en-US";
+
+    const apiKey = 'YOUR_API_KEY'; // Replace with your Cohere API Key
+
+    // Function to fetch AI response
+    async function getAIResponse(userInput) {
+      const prompt = `Human: ${userInput}\nAI:`;
+      try {
+        const response = await fetch("https://api.cohere.ai/v1/generate", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: "command-xlarge-nightly",
+            prompt: prompt,
+            max_tokens: 400,
+            temperature: 0.8
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return data.generations[0].text.trim();
+        } else {
+          const errorText = await response.text();
+          console.error("API Error:", response.status, errorText);
+          return `Error: ${response.status} - ${errorText}`;
+        }
+
+      } catch (error) {
+        console.error("Fetch Error:", error);
+        return "Sorry, I couldn't process your request. Please try again.";
+      }
+    }
+
+    // Function to display AI response
+    function displayResponse(response) {
+      aiResponseBox.textContent = `AI: ${response}`; // Display response
+    }
+
+    // Start listening automatically
+    recognition.start();
+
+    recognition.onresult = function (event) {
+      let transcript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript.trim() + " ";
+      }
+
+      if (transcript.toLowerCase().includes("over")) {
+        userCommand = userCommand.trim();
+        outputDiv.textContent += `User: ${userCommand}\n`;
+
+        // Get and display AI response
+        getAIResponse(userCommand).then((response) => displayResponse(response));
+        userCommand = "";
+      } else {
+        userCommand += transcript;
+        inputBox.textContent = `User Input: ${userCommand}`;
+      }
+    };
+
+    recognition.onerror = function (event) {
+      console.error("Recognition Error:", event.error);
+    };
+
+    recognition.onend = function () {
+      recognition.start(); // Restart recognition if stopped
+    };
+
+  </script>
+</body>
+</html>
